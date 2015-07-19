@@ -1,0 +1,7 @@
+
+<% if (!user) { %>
+	<h2>Welcome to Music Box! <a href="/login"> 
+	Please log in.</a></h2>
+<% } else { %>
+	<h2>Welcome to Music Box, <%= user.username %>.</h2>
+<% } %>
