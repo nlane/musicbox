@@ -284,7 +284,7 @@ router.post('/api/new-post', function(req, res){
   }
 })
 
-
+//create new playlist
 router.post('/api/new-playlist', function(req, res){
   if(!req.isAuthenticated()){
     res.redirect('/login');
@@ -299,21 +299,56 @@ router.post('/api/new-playlist', function(req, res){
   });
 })
 
-//send playlist
-router.put('api/send-playlist', function(req, res){
+//add songs to a playlist
+router.put('/api/add-track', function(req, res){
   if(!req.isAuthenticated()){
     res.redirect('/login');
   }
-  User.update({username:req.user.username}, {$push:{sent:req.body.playlist}}).exec(function(err, docs){
-    User.update({username:req.body.recipient}, {$push:{received:req.body.playlist}}).exec(function(err, docs){
-      if(!err){
-        res.send("Playlist sent!");
+  Playlist.update({_id:req.body.id}, {$push:{tracks:req.body.track}}).exec(function(err, docs){
+    if(!err){
+      res.json(docs);
+    }
+    else{
+      res.send("error")
+    }
+  })
+})
+
+//delete songs from a playlist
+router.put('/api/remove-track', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  Playlist.update({_id:req.body.id}, {$pull:{tracks:req.body.track}}).exec(function(err, docs){
+    if(!err){
+      res.json(docs);
+    }
+    else{
+      res.send("error")
+    }
+  })
+})
+
+//send playlist
+router.put('/api/send-playlist', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+    User.update({username:req.user.username}, {$push:{sent:req.body.playlist}}).exec(function(err, docs){
+      User.update({username:req.body.recipient}, {$push:{received:req.body.playlist}}).exec(function(err, docs){
+        if(!err){
+          res.send("Playlist sent!");
+        }
+        else{
+          res.send("error :(");
+        }  
+      });
+      if(err){
+        res.send("error :(")
       }
-      else{
-        res.send("error :(");
-      }  
     });
-  });
+  }
 })
 
 //deletes post given the posts id
@@ -333,23 +368,22 @@ router.delete('/api/post', function(req, res){
   }
 });
 
-//deletes user given the username
-// router.delete('/user', function(req, res){
-//   if(!req.isAuthenticated()){
-//     res.redirect('/login');
-//   }
-//   else{
-//     User.findByIdAndRemove(req.body.userid, function(err, docs){
-//         if(!err){
-//           req.logout;
-//           res.send("User deleted :( bye");
-//         }
-//         else{
-//           res.send("Please enter a valid userid");
-//         }
-//       })
-//   }
-// });
+//deletes post given the posts id
+router.delete('/api/playlist', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+    Post.findByIdAndRemove(req.body.id, function(err, docs){
+      if(!err){
+          res.send("Playlist removed!");
+      }
+        else{
+          res.send("Please enter a valid playlistid");
+        }
+      })
+  }
+});
 
 server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
   var addr = server.address();
