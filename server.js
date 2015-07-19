@@ -1,19 +1,15 @@
 var http = require('http');
 var path = require('path');
-var async = require('async');
-var socketio = require('socket.io');
 var express = require('express');
 var mongoose = require('mongoose');
 var passport = require('passport');
 var util = require('util');
-var CircularJSON = require('circular-json');
 var GitHubStrategy = require('passport-github').Strategy;
 var GITHUB_CLIENT_ID = "d1527f0d319039232e2e";
 var GITHUB_CLIENT_SECRET = "ed8e95d75cc80f65c6a84e7963c8f006333a3230";
 var router = express();
 var bodyParser = require('body-parser');
 var server = http.createServer(router);
-var io = socketio.listen(server);
 var methodOverride = require('method-override');
 var morgan = require('morgan');
 var cookieParser = require('cookie-parser');
@@ -30,7 +26,9 @@ var curruser;
 var userSchema = new mongoose.Schema({
   username: {type: String, required: true, unique: true},
   name: String,
-  friends: {type: Array}
+  friends: {type: Array},
+  sent: {type: Array},
+  recieved: {type: Array}
 });
 
 var postSchema = new mongoose.Schema({
@@ -41,10 +39,43 @@ var postSchema = new mongoose.Schema({
   time: {type: Date, default: Date.now}
 });
 
+var trackSchema = new mongoose.Schema({
+  track: {type:String, required: true},
+  artist: {type:String, required: true},
+  genre: String
+});
+
+var playlistSchema = new mongoose.Schema({
+  title: {type:String, required: true},
+  creator: {type:String, required: true},
+  tracks: {type:Array, required:true}
+});
 
 var User = mongoose.model('User', userSchema);
-
 var Post = mongoose.model('Post', postSchema);
+var Track = mongoose.model('Track', trackSchema);
+var Playlist = mongoose.model('Playlist', playlistSchema);
+
+// var newPlaylist = new Playlist({title:"Best Playlist Evah", creator:"nlane", tracks:["55abf055321611ff73929bde","55abf055321611ff73929bdf"]});
+//           newPlaylist.save(function(err, track){
+//             if(err){
+//               console.log("error: ", err);
+//             }
+//             else{
+//               console.log(track);
+//             }
+//           });
+          
+// var newTrack2 = new Track({track:"Budapest", artist:"George Ezra"});
+//           newTrack2.save(function(err, track){
+//             if(err){
+//               console.log("error: ", err);
+//             }
+//             else{
+//               console.log(track);
+//             }
+//           });
+
 // Passport session setup.
 //   To support persistent login sessions, Passport needs to be able to
 //   serialize users into and deserialize users out of the session.  Typically,
@@ -160,54 +191,77 @@ function ensureAuthenticated(req, res, next) {
 }
 
 // returns this user's document
-router.get('/info', function(req, res){
-   User.find({username:curruser}).exec(function(err, documents){
+router.get('/api/info', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   User.find({username:req.user.username}).exec(function(err, documents){
     res.json(documents);
   });
+  }
 })
 
 //returns this user's posts
-router.get('/posts', function(req, res){
-   Post.find({username:curruser}).exec(function(err, documents){
-    res.json(documents);
-  });
-})
+router.get('/api/posts', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+    Post.aggregate({$sort:{time:-1}}, {$match:{username:req.user.username}}).exec(function(err, docs){
+      res.json(docs);
+    })
+  }
+});
 
 //returns newsfeed of friends posts
-router.get('/home', function(req, res){
-   User.find({username:curruser}, {friends:1, _id:0}).exec(function(err, documents){
+router.get('/api/home', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   User.find({username:req.user.username}, {friends:1, _id:0}).exec(function(err, documents){
       var friendarray = documents;
       var fnds = friendarray[0].friends;
       Post.aggregate({$sort:{time:-1}}, {$match:{username:{$in:fnds}}}).exec(function(err, docs){
         res.json(docs);
       })
    });
+  }
 })
 
 //will add each other to friend's array
-router.put('/friend', function(req, res){
-  User.find({username:req.body.user}).exec(function(err, documents){
-    if(documents.length != 0){
-      User.update({username:curruser}, {$push:{friends:req.body.user}}).exec(function(err, documents){
-        User.update({username:req.body.user}, {$push:{friends:curruser}}).exec(function(err, documents){
-            res.send("You now are friends with: " + req.body.user);
+router.put('/api/friend', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+    User.find({username:req.body.user}).exec(function(err, documents){
+      if(documents.length != 0){
+        User.update({username:req.user.username}, {$push:{friends:req.body.user}}).exec(function(err, documents){
+          User.update({username:req.body.user}, {$push:{friends:req.user.username}}).exec(function(err, documents){
+              res.send("You now are friends with: " + req.body.user);
+          });
         });
-      });
-    }
-    else{
-      res.send("Please enter a valid username");
-    }
-  });
+      }
+      else{
+        res.send("Please enter a valid username");
+      }
+    });
+  }
 })
 
 //creates new post
-router.post('/new-post', function(req, res){
+router.post('/api/new-post', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
   if(req.body.track != undefined){
-    Post.create({username:curruser, message:req.body.message, track:req.body.track})
+    Post.create({username:req.user.username, message:req.body.message, track:req.body.track})
     res.send("Post created!");
   }
   else if (req.body.playlist != undefined){
-    Post.create({username:curruser, message:req.body.message, playlist:req.body.playlist})
+    Post.create({username:req.user.username, message:req.body.message, playlist:req.body.playlist})
     res.send("Post created!");
   }
   else {
@@ -216,17 +270,39 @@ router.post('/new-post', function(req, res){
 })
 
 //deletes post given the posts id
-router.delete('/post', function(req, res){
-  Post.find({_id:req.body.id}).exec(function(err, docs){
-      if(docs.length != 0){
-        Post.remove({_id:req.body.id});
-        res.send("Post removed!");
+router.delete('/api/post', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+    Post.findByIdAndRemove(req.body.id, function(err, docs){
+      if(!err){
+          res.send("Post removed!");
       }
-      else{
-        res.send("Please enter a valid post id");
-      }
-    })
+        else{
+          res.send("Please enter a valid post id");
+        }
+      })
+  }
 });
+
+//deletes user given the username
+// router.delete('/user', function(req, res){
+//   if(!req.isAuthenticated()){
+//     res.redirect('/login');
+//   }
+//   else{
+//     User.findByIdAndRemove(req.body.userid, function(err, docs){
+//         if(!err){
+//           req.logout;
+//           res.send("User deleted :( bye");
+//         }
+//         else{
+//           res.send("Please enter a valid userid");
+//         }
+//       })
+//   }
+// });
 
 server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
   var addr = server.address();
