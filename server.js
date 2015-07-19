@@ -16,7 +16,7 @@ var cookieParser = require('cookie-parser');
 var session = require("express-session");
 mongoose.connect('mongodb://localhost/musicbox');
 router.use(bodyParser.json());
-
+router.use(express.static(path.resolve('./views')));
 
 var myIP = process.env.IP || "0.0.0.0";
 var myPORT = process.env.PORT || 3000;
@@ -28,7 +28,7 @@ var userSchema = new mongoose.Schema({
   name: String,
   friends: {type: Array},
   sent: {type: Array},
-  recieved: {type: Array}
+  received: {type: Array}
 });
 
 var postSchema = new mongoose.Schema({
@@ -56,33 +56,6 @@ var Post = mongoose.model('Post', postSchema);
 var Track = mongoose.model('Track', trackSchema);
 var Playlist = mongoose.model('Playlist', playlistSchema);
 
-// var newPlaylist = new Playlist({title:"Best Playlist Evah", creator:"nlane", tracks:["55abf055321611ff73929bde","55abf055321611ff73929bdf"]});
-//           newPlaylist.save(function(err, track){
-//             if(err){
-//               console.log("error: ", err);
-//             }
-//             else{
-//               console.log(track);
-//             }
-//           });
-          
-// var newTrack2 = new Track({track:"Budapest", artist:"George Ezra"});
-//           newTrack2.save(function(err, track){
-//             if(err){
-//               console.log("error: ", err);
-//             }
-//             else{
-//               console.log(track);
-//             }
-//           });
-
-// Passport session setup.
-//   To support persistent login sessions, Passport needs to be able to
-//   serialize users into and deserialize users out of the session.  Typically,
-//   this will be as simple as storing the user ID when serializing, and finding
-//   the user by ID when deserializing.  However, since this example does not
-//   have a database of user records, the complete GitHub profile is serialized
-//   and deserialized.
 passport.serializeUser(function(user, done) {
   done(null, user);
 });
@@ -152,6 +125,10 @@ router.get('/login', function(req, res){
   res.render('login', { user: req.user });
 });
 
+router.get('/home', function(req, res){
+  res.sendFile(path.resolve('./views/home.html'));
+});
+
 
 // GET /auth/github
 //   Use passport.authenticate() as route middleware to authenticate the
@@ -196,7 +173,7 @@ router.get('/api/info', function(req, res){
     res.redirect('/login');
   }
   else{
-   User.find({username:req.user.username}).exec(function(err, documents){
+   User.find({username:req.user.username}, {sent:0, received:0}).exec(function(err, documents){
     res.json(documents);
   });
   }
@@ -230,6 +207,42 @@ router.get('/api/home', function(req, res){
   }
 })
 
+//returns this user's playlists
+router.get('/api/playlists', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   Playlist.find({creator:req.user.username}).exec(function(err, documents){
+      res.json(documents);
+   });
+  }
+})
+
+//returns this user's sent playlists
+router.get('/api/sent', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   User.find({username:req.user.username}, {sent:1, _id:0}).exec(function(err, documents){
+      res.json(documents);
+   });
+  }
+})
+
+//returns this user's received playlists
+router.get('/api/received', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   User.find({username:req.user.username}, {received:1, _id:0}).exec(function(err, documents){
+      res.json(documents);
+   });
+  }
+})
+
 //will add each other to friend's array
 router.put('/api/friend', function(req, res){
   if(!req.isAuthenticated()){
@@ -240,7 +253,9 @@ router.put('/api/friend', function(req, res){
       if(documents.length != 0){
         User.update({username:req.user.username}, {$push:{friends:req.body.user}}).exec(function(err, documents){
           User.update({username:req.body.user}, {$push:{friends:req.user.username}}).exec(function(err, documents){
+            if(!err){
               res.send("You now are friends with: " + req.body.user);
+            }
           });
         });
       }
@@ -267,6 +282,38 @@ router.post('/api/new-post', function(req, res){
   else {
     res.send("Please enter either a track or playlist");
   }
+})
+
+
+router.post('/api/new-playlist', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  Playlist.create({creator:req.user.username, title:req.body.title, tracks:req.body.tracks}, function(err, documents){
+    if(!err){
+      res.send("Playlist created!");
+    }
+    else{
+      res.send("Error :(")
+    }
+  });
+})
+
+//send playlist
+router.put('api/send-playlist', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  User.update({username:req.user.username}, {$push:{sent:req.body.playlist}}).exec(function(err, docs){
+    User.update({username:req.body.recipient}, {$push:{received:req.body.playlist}}).exec(function(err, docs){
+      if(!err){
+        res.send("Playlist sent!");
+      }
+      else{
+        res.send("error :(");
+      }  
+    });
+  });
 })
 
 //deletes post given the posts id
