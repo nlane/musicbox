@@ -21,11 +21,11 @@ router.use(express.static(path.resolve('./views')));
 var myIP = process.env.IP || "0.0.0.0";
 var myPORT = process.env.PORT || 3000;
 
-var curruser;
 
 var userSchema = new mongoose.Schema({
   username: {type: String, required: true, unique: true},
   name: String,
+  avatar: String,
   friends: {type: Array},
   sent: {type: Array},
   received: {type: Array}
@@ -42,13 +42,15 @@ var postSchema = new mongoose.Schema({
 var trackSchema = new mongoose.Schema({
   track: {type:String, required: true},
   artist: {type:String, required: true},
-  genre: String
+  genre: String,
+  image: String
 });
 
 var playlistSchema = new mongoose.Schema({
   title: {type:String, required: true},
   creator: {type:String, required: true},
-  tracks: {type:Array, required:true}
+  tracks: {type:Array, required:true},
+  time: {type:Date, default: Date.now}
 });
 
 var User = mongoose.model('User', userSchema);
@@ -72,14 +74,11 @@ passport.use(new GitHubStrategy({
   function(accessToken, refreshToken, profile, done) {
     // asynchronous verification, for effect...
     process.nextTick(function () {
-      var uname = profile.username;
-      User.find({username:uname}).exec(function(err, documents){
+      User.find({username:profile.username}).exec(function(err, documents){
         if(documents.length != 0){
-          curruser = uname;
         }
         else{
-          var newUser = new User({username:uname, name:profile.displayName});
-          curruser = uname;
+          var newUser = new User({username:profile.username, name:profile.displayName});
           newUser.save(function(err, user){
             if(err){
               console.log("error: ", err);
@@ -114,7 +113,14 @@ router.set('views', __dirname + '/views');
   router.use(passport.session());
 
 router.get('/', function(req, res){
-  res.render('index', { user: req.user})
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+  User.update({username:req.user.username},{$set:{avatar:req.user._json.avatar_url}}).exec(function(err, docs){
+  });
+  res.render('index', { user: req.user}) 
+  }
 });
 
 router.get('/account', ensureAuthenticated, function(req, res){
@@ -213,7 +219,7 @@ router.get('/api/playlists', function(req, res){
     res.redirect('/login');
   }
   else{
-   Playlist.find({creator:req.user.username}).exec(function(err, documents){
+   Playlist.aggregate({$sort:{time:-1}}, {$match:{creator:req.user.username}}).exec(function(err, documents){
       res.json(documents);
    });
   }
@@ -242,6 +248,43 @@ router.get('/api/received', function(req, res){
    });
   }
 })
+
+//gets playlist info given id
+router.get('/api/playlist/:playlistid', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   Playlist.find({_id:req.params.playlistid}).exec(function(err, documents){
+      res.json(documents);
+   });
+  }
+})
+
+//gets track info given id
+router.get('/api/track/:trackid', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   Track.find({_id:req.params.trackid}).exec(function(err, documents){
+      res.json(documents);
+   });
+  }
+})
+
+//searches for track
+router.get('/api/track/search/:search', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   Track.aggregate({$match:{track:{$regex:(req.params.search+".*")}}}, {$limit: 10}).exec(function(err, documents){
+      res.json(documents);
+   });
+  }
+})
+
 
 //will add each other to friend's array
 router.put('/api/friend', function(req, res){
@@ -299,12 +342,27 @@ router.post('/api/new-playlist', function(req, res){
   });
 })
 
+//replace playlist
+router.put('/api/replace-playlist', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  Playlist.update({_id:req.body.id}, {$set:{tracks:req.body.trackArray}, $currentDate:{time:{$type:"date"}}}).exec(function(err, docs){
+    if(!err){
+      res.send("Playlist updated!");
+    }
+    else{
+      res.send("Error :(");
+    }
+  });
+});
+
 //add songs to a playlist
 router.put('/api/add-track', function(req, res){
   if(!req.isAuthenticated()){
     res.redirect('/login');
   }
-  Playlist.update({_id:req.body.id}, {$push:{tracks:req.body.track}}).exec(function(err, docs){
+  Playlist.update({_id:req.body.id}, {$push:{tracks:req.body.track}, $currentDate:{time:{$type:"date"}}}).exec(function(err, docs){
     if(!err){
       res.json(docs);
     }
@@ -319,7 +377,7 @@ router.put('/api/remove-track', function(req, res){
   if(!req.isAuthenticated()){
     res.redirect('/login');
   }
-  Playlist.update({_id:req.body.id}, {$pull:{tracks:req.body.track}}).exec(function(err, docs){
+  Playlist.update({_id:req.body.id}, {$pull:{tracks:req.body.track}, $currentDate:{time:{$type:"date"}}}).exec(function(err, docs){
     if(!err){
       res.json(docs);
     }
@@ -345,7 +403,7 @@ router.put('/api/send-playlist', function(req, res){
         }  
       });
       if(err){
-        res.send("error :(")
+        res.send("error :(");
       }
     });
   }
