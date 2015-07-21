@@ -14,7 +14,7 @@ var methodOverride = require('method-override');
 var morgan = require('morgan');
 var cookieParser = require('cookie-parser');
 var session = require("express-session");
-mongoose.connect('mongodb://localhost:47439/musicboxtest');
+mongoose.connect('mongodb://127.0.0.1:47439/musicboxtest');
 // mongoose.connect('mongodb://localhost/musicbox');
 router.use(bodyParser.json());
 router.use(express.static(path.resolve('./views')));
