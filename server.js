@@ -17,7 +17,7 @@ var session = require("express-session");
 mongoose.connect('mongodb://127.0.0.1:47439/musicboxtest');
 // mongoose.connect('mongodb://localhost/musicbox');
 router.use(bodyParser.json());
-router.use(express.static(path.resolve('./views')));
+// router.use(express.static(path.resolve('./views')));
 
 var myIP = process.env.IP || "0.0.0.0";
 var myPORT = process.env.PORT || 3000;
