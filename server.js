@@ -14,7 +14,8 @@ var methodOverride = require('method-override');
 var morgan = require('morgan');
 var cookieParser = require('cookie-parser');
 var session = require("express-session");
-mongoose.connect('mongodb://localhost/musicbox');
+mongoose.connect('mongodb://localhost:47439/musicbox');
+// mongoose.connect('mongodb://localhost/musicbox');
 router.use(bodyParser.json());
 router.use(express.static(path.resolve('./views')));
 
@@ -53,10 +54,27 @@ var playlistSchema = new mongoose.Schema({
   time: {type:Date, default: Date.now}
 });
 
+var testSchema = new mongoose.Schema({
+  name: String
+});
+
 var User = mongoose.model('User', userSchema);
 var Post = mongoose.model('Post', postSchema);
 var Track = mongoose.model('Track', trackSchema);
 var Playlist = mongoose.model('Playlist', playlistSchema);
+var Test = mongoose.model('Test', testSchema, 'test');
+
+
+var t = new Test({name:"c9 1"});
+
+ t.save(function(err, user){
+            if(err){
+              console.log("error: ", err);
+            }
+            else{
+              console.log(user);
+            }
+          });
 
 passport.serializeUser(function(user, done) {
   done(null, user);
