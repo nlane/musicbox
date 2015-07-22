@@ -14,13 +14,13 @@ var methodOverride =require('method-override');
 var morgan = require('morgan');
 var cookieParser = require('cookie-parser');
 var session = require("express-session");
-// mongoose.connect('mongodb://127.0.0.1:47439/musicboxtest');
-mongoose.connect('mongodb://localhost:47439/musicbox');
+mongoose.connect('mongodb://localhost:47439/musicboxtest');
+// mongoose.connect('mongodb://localhost/musicbox');
 router.use(bodyParser.json());
 
 var myIP = process.env.IP || "0.0.0.0";
-// var myPORT = process.env.PORT || 3000;
-var myPORT =  47439 || 3000;
+var myPORT = process.env.PORT || 3000;
+// var myPORT =  47439 || 3000;
 
 var userSchema = new mongoose.Schema({
   username: {type: String, required: true, unique: true},
@@ -360,7 +360,7 @@ router.post('/api/new-playlist', function(req, res){
   });
 })
 
-//replace playlist
+//replace songs in playlist (user can reorder their songs, add, and delete all in one request)
 router.put('/api/replace-playlist', function(req, res){
   if(!req.isAuthenticated()){
     res.redirect('/login');
@@ -444,13 +444,13 @@ router.delete('/api/post', function(req, res){
   }
 });
 
-//deletes post given the posts id
+//deletes playlist given the posts id
 router.delete('/api/playlist', function(req, res){
   if(!req.isAuthenticated()){
     res.redirect('/login');
   }
   else{
-    Post.findByIdAndRemove(req.body.id, function(err, docs){
+    Playlist.findByIdAndRemove(req.body.id, function(err, docs){
       if(!err){
           res.send("Playlist removed!");
       }
