@@ -303,13 +303,13 @@ router.get('/api/artist/search/:search', function(req, res){
 })
 
 
-//searches with both artist and track
-router.get('/api/artist-track/search/:artist/:track', function(req, res){
+//finds tracks by given artist
+router.get('/api/artists-track/search/:artist', function(req, res){
   if(!req.isAuthenticated()){
     res.redirect('/login');
   }
   else{
-   Track.aggregate({$and:{$match:{artist:{$regex:("(?i)" + req.params.artist+".*")}}}, $match:{track:{$regex:("(?i)" + req.params.track+".*")}}}, {$limit: 20}).exec(function(err, documents){
+   Track.aggregate({$match:{artist:{$regex:("(?i)" + req.params.artist+".*")}}}, {$limit: 20}).exec(function(err, documents){
       res.json(documents);
    });
   }
