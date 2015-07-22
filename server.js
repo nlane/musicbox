@@ -14,7 +14,6 @@ var methodOverride =require('method-override');
 var morgan = require('morgan');
 var cookieParser = require('cookie-parser');
 var session = require("express-session");
-// mongoose.connect('mongodb://localhost:47439/musicboxtest');
 mongoose.connect('mongodb://localhost:47439/musicbox');
 router.use(bodyParser.json());
 
@@ -35,8 +34,9 @@ var postSchema = new mongoose.Schema({
   message: String,
   track: String,
   playlist: String,
-  time: {type: Date, default: Date.now}
-});
+  time: {type: Date, default: Date.now}},
+  {collection : 'posts'}
+);
 
 var trackSchema = new mongoose.Schema({
   track: {type:String, required: true},
