@@ -15,7 +15,7 @@ var morgan = require('morgan');
 var cookieParser = require('cookie-parser');
 var session = require("express-session");
 // mongoose.connect('mongodb://localhost:47439/musicboxtest');
-mongoose.connect('mongodb://localhost/musicbox');
+mongoose.connect('mongodb://localhost:47439/musicbox');
 router.use(bodyParser.json());
 
 var myIP = process.env.IP || "0.0.0.0";
