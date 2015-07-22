@@ -14,13 +14,12 @@ var methodOverride =require('method-override');
 var morgan = require('morgan');
 var cookieParser = require('cookie-parser');
 var session = require("express-session");
-mongoose.connect('mongodb://localhost:47439/musicboxtest');
-// mongoose.connect('mongodb://localhost/musicbox');
+// mongoose.connect('mongodb://localhost:47439/musicboxtest');
+mongoose.connect('mongodb://localhost/musicbox');
 router.use(bodyParser.json());
 
 var myIP = process.env.IP || "0.0.0.0";
 var myPORT = process.env.PORT || 3000;
-// var myPORT =  47439 || 3000;
 
 var userSchema = new mongoose.Schema({
   username: {type: String, required: true, unique: true},
