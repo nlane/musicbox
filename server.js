@@ -19,7 +19,7 @@ mongoose.connect('mongodb://localhost:47439/musicbox');
 router.use(bodyParser.json());
 
 var myIP = process.env.IP || "0.0.0.0";
-var myPORT = process.env.PORT || 3000;
+var myPORT = 47418 || 3000;
 
 var userSchema = new mongoose.Schema({
   username: {type: String, required: true, unique: true},
