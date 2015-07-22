@@ -10,18 +10,17 @@ var GITHUB_CLIENT_SECRET = "ed8e95d75cc80f65c6a84e7963c8f006333a3230";
 var router = express();
 var bodyParser = require('body-parser');
 var server = http.createServer(router);
-var methodOverride = require('method-override');
+var methodOverride =require('method-override');
 var morgan = require('morgan');
 var cookieParser = require('cookie-parser');
 var session = require("express-session");
-mongoose.connect('mongodb://127.0.0.1:47439/musicboxtest');
-// mongoose.connect('mongodb://localhost/musicbox');
+// mongoose.connect('mongodb://127.0.0.1:47439/musicboxtest');
+mongoose.connect('mongodb://localhost:47439/musicbox');
 router.use(bodyParser.json());
-// router.use(express.static(path.resolve('./views')));
 
 var myIP = process.env.IP || "0.0.0.0";
-var myPORT = process.env.PORT || 3000;
-
+// var myPORT = process.env.PORT || 3000;
+var myPORT =  47439 || 3000;
 
 var userSchema = new mongoose.Schema({
   username: {type: String, required: true, unique: true},
@@ -54,27 +53,12 @@ var playlistSchema = new mongoose.Schema({
   time: {type:Date, default: Date.now}
 });
 
-var testSchema = new mongoose.Schema({
-  name: String
-});
 
 var User = mongoose.model('User', userSchema);
 var Post = mongoose.model('Post', postSchema);
-var Track = mongoose.model('Track', trackSchema);
+var Track = mongoose.model('Track', trackSchema, 'track');
 var Playlist = mongoose.model('Playlist', playlistSchema);
-var Test = mongoose.model('Test', testSchema, 'test');
 
-
-var t = new Test({name:"c9 1"});
-
- t.save(function(err, user){
-            if(err){
-              console.log("error: ", err);
-            }
-            else{
-              console.log(user);
-            }
-          });
 
 passport.serializeUser(function(user, done) {
   done(null, user);
@@ -90,7 +74,6 @@ passport.use(new GitHubStrategy({
     callbackURL: "https://music-box-nlane.c9.io/auth/github/callback"
   },
   function(accessToken, refreshToken, profile, done) {
-    // asynchronous verification, for effect...
     process.nextTick(function () {
       User.find({username:profile.username}).exec(function(err, documents){
         if(documents.length != 0){
@@ -107,11 +90,6 @@ passport.use(new GitHubStrategy({
           });
         }
       });
-            
-      // To keep the example simple, the user's GitHub profile is returned to
-      // represent the logged-in user.  In a typical routerlication, you would want
-      // to associate the GitHub account with a user record in your database,
-      // and return that user instead.
       return done(null, profile);
     });
   }
@@ -125,8 +103,6 @@ router.set('views', __dirname + '/views');
   router.use(bodyParser());
   router.use(methodOverride());
   router.use(session({ secret: 'keyboard cat' }));
-  // Initialize Passport!  Also use passport.session() middleware, to support
-  // persistent login sessions (recommended).
   router.use(passport.initialize());
   router.use(passport.session());
 
@@ -154,23 +130,11 @@ router.get('/home', function(req, res){
 });
 
 
-// GET /auth/github
-//   Use passport.authenticate() as route middleware to authenticate the
-//   request.  The first step in GitHub authentication will involve redirecting
-//   the user to github.com.  After authorization, GitHubwill redirect the user
-//   back to this routerlication at /auth/github/callback
 router.get('/auth/github',
   passport.authenticate('github'),
   function(req, res){
-    // The request will be redirected to GitHub for authentication, so this
-    // function will not be called.
   });
 
-// GET /auth/github/callback
-//   Use passport.authenticate() as route middleware to authenticate the
-//   request.  If authentication fails, the user will be redirected back to the
-//   login page.  Otherwise, the primary route function function will be called,
-//   which, in this example, will redirect the user to the home page.
 router.get('/auth/github/callback', 
   passport.authenticate('github', { failureRedirect: '/login' }),
   function(req, res) {
@@ -267,6 +231,30 @@ router.get('/api/received', function(req, res){
   }
 })
 
+//get list of users (see who you can friend)
+router.get('/api/all-users', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   User.find({}, {username:1, name:1, avatar:1}).exec(function(err, documents){
+      res.json(documents);
+   });
+  }
+})
+
+//get user info given username
+router.get('/api/user/:username', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   User.find({username:req.params.username}).exec(function(err, documents){
+      res.json(documents);
+   });
+  }
+})
+
 //gets playlist info given id
 router.get('/api/playlist/:playlistid', function(req, res){
   if(!req.isAuthenticated()){
@@ -297,7 +285,19 @@ router.get('/api/track/search/:search', function(req, res){
     res.redirect('/login');
   }
   else{
-   Track.aggregate({$match:{track:{$regex:(req.params.search+".*")}}}, {$limit: 10}).exec(function(err, documents){
+   Track.aggregate({$match:{track:{$regex:("(?i)" + req.params.search+".*")}}}, {$limit: 10}).exec(function(err, documents){
+      res.json(documents);
+   });
+  }
+})
+
+//searches for artist 
+router.get('/api/artist/search/:search', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   Track.aggregate({$match:{artist:{$regex:("(?i)" + req.params.search+".*")}}}, {$group:{_id:{artist:'$artist'}}}, {$limit: 10}).exec(function(err, documents){
       res.json(documents);
    });
   }
@@ -461,7 +461,7 @@ router.delete('/api/playlist', function(req, res){
   }
 });
 
-server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
+server.listen(myPORT, process.env.IP || "0.0.0.0", function(){
   var addr = server.address();
   console.log("Server listening at", addr.address + ":" + addr.port);
 });
