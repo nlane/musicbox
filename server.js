@@ -309,7 +309,7 @@ router.get('/api/artist-track/search/:artist/:track', function(req, res){
     res.redirect('/login');
   }
   else{
-   Track.aggregate({$match:{artist:{$regex:("(?i)" + req.params.artist+".*")}}, $match:{track:{$regex:("(?i)" + req.params.track+".*")}}}, {$limit: 20}).exec(function(err, documents){
+   Track.aggregate({$and:{$match:{artist:{$regex:("(?i)" + req.params.artist+".*")}}}, $match:{track:{$regex:("(?i)" + req.params.track+".*")}}}, {$limit: 20}).exec(function(err, documents){
       res.json(documents);
    });
   }
