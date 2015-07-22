@@ -53,8 +53,8 @@ var playlistSchema = new mongoose.Schema({
 });
 
 
-var User = mongoose.model('User', userSchema);
-var Post = mongoose.model('Post', postSchema);
+var User = mongoose.model('User', userSchema, 'users');
+var Post = mongoose.model('Post', postSchema, 'posts');
 var Track = mongoose.model('Track', trackSchema, 'track');
 var Playlist = mongoose.model('Playlist', playlistSchema);
 
