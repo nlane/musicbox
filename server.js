@@ -70,7 +70,7 @@ passport.deserializeUser(function(obj, done) {
 passport.use(new GitHubStrategy({
     clientID: GITHUB_CLIENT_ID,
     clientSecret: GITHUB_CLIENT_SECRET,
-    callbackURL: "https://music-box-nlane.c9.io/auth/github/callback"
+    callbackURL: "http://mlb1.acad.ece.udel.edu:47418/auth/github/callback"
   },
   function(accessToken, refreshToken, profile, done) {
     process.nextTick(function () {
