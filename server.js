@@ -284,7 +284,7 @@ router.get('/api/track/search/:search', function(req, res){
     res.redirect('/login');
   }
   else{
-   Track.aggregate({$match:{track:{$regex:("(?i)" + req.params.search+".*")}}}, {$limit: 10}).exec(function(err, documents){
+   Track.aggregate({$match:{track:{$regex:("(?i)" + req.params.search+".*")}}}, {$limit: 20}).exec(function(err, documents){
       res.json(documents);
    });
   }
@@ -296,12 +296,24 @@ router.get('/api/artist/search/:search', function(req, res){
     res.redirect('/login');
   }
   else{
-   Track.aggregate({$match:{artist:{$regex:("(?i)" + req.params.search+".*")}}}, {$group:{_id:{artist:'$artist'}}}, {$limit: 10}).exec(function(err, documents){
+   Track.aggregate({$match:{artist:{$regex:("(?i)" + req.params.search+".*")}}}, {$group:{_id:{artist:'$artist'}}}, {$limit: 20}).exec(function(err, documents){
       res.json(documents);
    });
   }
 })
 
+
+//searches with both artist and track
+router.get('/api/artist-track/search/:artist/:track', function(req, res){
+  if(!req.isAuthenticated()){
+    res.redirect('/login');
+  }
+  else{
+   Track.aggregate({$match:{artist:{$regex:("(?i)" + req.params.artist+".*")}}, $match:{track:{$regex:("(?i)" + req.params.track+".*")}}}, {$limit: 20}).exec(function(err, documents){
+      res.json(documents);
+   });
+  }
+})
 
 //will add each other to friend's array
 router.put('/api/friend', function(req, res){
@@ -364,7 +376,7 @@ router.put('/api/replace-playlist', function(req, res){
   if(!req.isAuthenticated()){
     res.redirect('/login');
   }
-  Playlist.update({_id:req.body.id}, {$set:{tracks:req.body.trackArray}, $currentDate:{time:{$type:"date"}}}).exec(function(err, docs){
+  Playlist.update({_id:req.body.id}, {$set:{tracks:req.body.tracks}, $currentDate:{time:{$type:"date"}}}).exec(function(err, docs){
     if(!err){
       res.send("Playlist updated!");
     }
