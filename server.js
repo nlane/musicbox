@@ -366,7 +366,7 @@ router.post('/api/new-playlist', function(req, res){
       res.send("Playlist created!");
     }
     else{
-      res.send("Error :(")
+     res.send("error")
     }
   });
 })
@@ -381,7 +381,7 @@ router.put('/api/replace-playlist', function(req, res){
       res.send("Playlist updated!");
     }
     else{
-      res.send("Error :(");
+      res.send("error")
     }
   });
 });
