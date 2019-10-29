@@ -12,7 +12,7 @@
     "express": "~3.2.4",
     "express-session": "~1.0.0",
     "method-override": "~1.0.0",
-    "mongoose": "~4.0.7",
+    "mongoose": "~5.7.7",
     "morgan": "~1.0.0",
     "passport": ">= 0.0.0",
     "passport-github": ">= 0.0.0"
